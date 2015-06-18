@@ -78,7 +78,7 @@
         ],
         'ListMembers' => [
             'httpMethod' => 'GET',
-            'uri' => '/{ApiVersion}/organizations/{idOrg}/member',
+            'uri' => '/{ApiVersion}/organizations/{idOrg}/members',
             'responseModel' => 'Result',
             'parameters' => [
                 'ApiVersion' => [
