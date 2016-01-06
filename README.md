@@ -15,7 +15,7 @@ https://trello.com/docs/
 Trello uses a key/token pair to authenticate for API calls. You can get a key/secret at https://trello.com/1/appKey/generate
 
 # Install #
-Installation is simple with [Composer](https://getcomposer.org/). Add ```"silinternational/trello-php-client", "dev-master"``` to your ```composer.json``` file and update.
+Installation is simple with [Composer](https://getcomposer.org/). Add ```"silinternational/trello-php-client": "dev-master"``` to your ```composer.json``` file and update.
 
 # Usage #
 Example:
