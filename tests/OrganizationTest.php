@@ -3,19 +3,17 @@ namespace tests;
 
 include __DIR__ . '/../vendor/autoload.php';
 
+use GuzzleHttp\Command\Exception\CommandClientException;
+use GuzzleHttp\HandlerStack;
+use GuzzleHttp\Handler\MockHandler;
+use GuzzleHttp\Psr7\Response;
 use Trello\Organization;
-use GuzzleHttp\Exception\RequestException;
-use GuzzleHttp\Subscriber\Mock;
-use GuzzleHttp\Message\Response;
-use GuzzleHttp\Stream\Stream;
 
 class OrganizationTest extends \PHPUnit_Framework_TestCase
 {
     public function testAddMember()
     {
-        $client = $this->getOrganizationClient();
-
-        $mockBody = Stream::factory(json_encode([
+        $mockBody = json_encode([
             "id" => "552bfa4aadda3e05254317k",
             "avatarHash" => null,
             "bio" => "",
@@ -43,14 +41,9 @@ class OrganizationTest extends \PHPUnit_Framework_TestCase
             "uploadedAvatarHash" => null,
             "premiumFeatures" => [],
             "idBoardsPinned" => null,
-        ]));
-
-        $mock = new Mock([
-            new Response(200, [], $mockBody),
         ]);
 
-        // Add the mock subscriber to the client.
-        $client->getHttpClient()->getEmitter()->attach($mock);
+        $client = $this->getMockClient($mockBody);
 
         // Add user to org
         $user = $client->addMember([
@@ -65,16 +58,9 @@ class OrganizationTest extends \PHPUnit_Framework_TestCase
 
     public function testAddMemberAlreadyExists()
     {
-        $client = $this->getOrganizationClient();
+        $mockBody = 'Member already invited';
 
-        $mockBody = Stream::factory('Member already invited');
-
-        $mock = new Mock([
-            new Response(403, [], $mockBody),
-        ]);
-
-        // Add the mock subscriber to the client.
-        $client->getHttpClient()->getEmitter()->attach($mock);
+        $client = $this->getMockClient($mockBody, 403);
 
         try {
             // Add user to org
@@ -83,7 +69,7 @@ class OrganizationTest extends \PHPUnit_Framework_TestCase
                 'email' => 'testuser@domain.org',
                 'fullName' => 'Test User',
             ]);
-        } catch (RequestException $e) {
+        } catch (CommandClientException $e) {
             $response = $e->getResponse();
             $body = $response->getBody();
 
@@ -97,9 +83,7 @@ class OrganizationTest extends \PHPUnit_Framework_TestCase
 
     public function testRemoveMember()
     {
-        $client = $this->getOrganizationClient();
-
-        $mockBody = Stream::factory(json_encode([
+        $mockBody = json_encode([
             "id" => "5sbg5e97597761a12r1455da12b",
             "name" => "testingorg187",
             "displayName" => "Testing Org",
@@ -120,14 +104,10 @@ class OrganizationTest extends \PHPUnit_Framework_TestCase
                     "confirmed" => true
                 ]
             ]
-        ]));
-
-        $mock = new Mock([
-            new Response(200, [], $mockBody),
         ]);
 
-        // Add the mock subscriber to the client.
-        $client->getHttpClient()->getEmitter()->attach($mock);
+        $client = $this->getMockClient($mockBody);
+
 
         // Remove user from org, returns org
         $org = $client->removeMember([
@@ -141,15 +121,8 @@ class OrganizationTest extends \PHPUnit_Framework_TestCase
 
     public function testRemoveMemberDoesntExist()
     {
-        $client = $this->getOrganizationClient();
-
-        $mockBody = Stream::factory('membership not found');
-        $mock = new Mock([
-            new Response(401, [], $mockBody),
-        ]);
-
-        // Add the mock subscriber to the client.
-        $client->getHttpClient()->getEmitter()->attach($mock);
+        $mockBody = 'membership not found';
+        $client = $this->getMockClient($mockBody, 401);
 
         try {
             // Add user to org
@@ -157,7 +130,7 @@ class OrganizationTest extends \PHPUnit_Framework_TestCase
                 'idOrg' => '5sbg5e97597761a12r1455da12b',
                 'idMember' => '34fq44ggf4f4fvsavg5y6s6h',
             ]);
-        } catch (RequestException $e) {
+        } catch (CommandClientException $e) {
             $response = $e->getResponse();
             $body = $response->getBody();
 
@@ -170,9 +143,7 @@ class OrganizationTest extends \PHPUnit_Framework_TestCase
 
     public function testListMembers()
     {
-        $client = $this->getOrganizationClient();
-
-        $mockBody = Stream::factory(json_encode([
+        $mockBody = json_encode([
             [
                 "id" => "5vaf3ee8asg52213a9dc66f",
                 "fullName" => "Testing User",
@@ -183,14 +154,9 @@ class OrganizationTest extends \PHPUnit_Framework_TestCase
                 "fullName" => "Another Test",
                 "username" => "anothertest1"
             ]
-        ]));
-
-        $mock = new Mock([
-            new Response(200, [], $mockBody),
         ]);
 
-        // Add the mock subscriber to the client.
-        $client->getHttpClient()->getEmitter()->attach($mock);
+        $client = $this->getMockClient($mockBody);
 
         // Add user to org
         $users = $client->listMembers([
@@ -202,13 +168,19 @@ class OrganizationTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals(2, count($users)-1);
     }
 
-    private function getOrganizationClient($extra = [])
+    private function getMockClient(string $mockBody, int $responseCode = 200) : Organization
     {
         $config = include __DIR__ . '/config-test.php';
-        $config = array_merge_recursive($config, $extra);
 
-        return new Organization($config);
+        $mockHandler = new MockHandler([
+            new Response($responseCode, [], $mockBody),
+        ]);
+
+        $handlerStack = HandlerStack::create($mockHandler);
+        return new Organization(array_merge([
+            'http_client_options' => [
+                'handler' => $handlerStack,
+            ]
+        ], $config));
     }
-
-
 }
