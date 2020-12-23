@@ -1,3 +1,5 @@
+# ⛔️ This repository is no longer maintained. ⛔️
+
 # trello-php-client
 PHP client to interact with the Trello API.
 
